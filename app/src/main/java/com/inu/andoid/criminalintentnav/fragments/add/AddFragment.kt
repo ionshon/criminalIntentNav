@@ -21,14 +21,16 @@ import java.text.DateFormat
 import java.text.ParseException
 import java.text.ParsePosition
 import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 
 private const val DIALOG_DATE = "DialogDate"
 class AddFragment : Fragment() {
 
-    var dateString = ""
-    var timeString = ""
+   // private lateinit var crime: Crime
 
     private lateinit var mCrimeViewModel: CrimeViewModel
     override fun onCreateView(
@@ -36,14 +38,24 @@ class AddFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_add, container, false)
+// 포맷변경 ( 년월일 시분초) SimpleDateFormat
+        val sdformat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
         view.addDate_button.setOnClickListener {
-            val cal = Calendar.getInstance()    //캘린더뷰 만들기
+            val cal = Calendar.getInstance()    //캘린더뷰 만들기val date = LocalDateTime.now()
+            val dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            // Getting zone id
+
             val dateSetListener = DatePickerDialog.OnDateSetListener {
                     datePicker, year, month, dayOfMonth ->
                 val resultDate : Date = GregorianCalendar(year, month, dayOfMonth).time
-                dateString = "${year}년 ${month+1}월 ${dayOfMonth}일"
-                addDate_et_old.text = "${resultDate}" //"날짜/시간 : "+ dateString // + " / " + timeString
+                // Getting the timezone
+                val tz: TimeZone = cal.getTimeZone()
+                // Getting zone id
+                val zoneId: ZoneId = tz.toZoneId()
+                val localDateTime: LocalDateTime = LocalDateTime.ofInstant(resultDate.toInstant(), zoneId)
+                val nowString = localDateTime.format(dtf)
+                addDate_text_old.text = "${nowString}" //"날짜/시간 : "+ dateString // + " / " + timeString
             }
             DatePickerDialog(requireContext(), dateSetListener, cal.get(Calendar.YEAR),cal.get(Calendar.MONTH),cal.get(Calendar.DAY_OF_MONTH)).show()
         /*
@@ -59,10 +71,17 @@ class AddFragment : Fragment() {
         }
         view.addTime_button.setOnClickListener {
             val cal = Calendar.getInstance()
+            cal.setTime(stringToDate(addDate_text_old.text.toString())) //(addDate_et_old.text) //"${addDate_et_old.text}" + " " + timeString
+
             val timeSetListener = TimePickerDialog.OnTimeSetListener { datepicker, hourOfDay, minute ->
-                timeString = "${hourOfDay}시 ${minute}분"
-                addDate_et_old.text = "${addDate_et_old.text}" + " " + timeString
+                cal.add(Calendar.HOUR, hourOfDay)
+                cal.add(Calendar.MINUTE, minute)
+                val today = sdformat.format(cal.getTime())
+                addDate_text_old.text = today //"${addDate_et_old.text}" + " " + timeString
+
+
             }
+            Log.d("date time:",  "${addDate_text_old.text}")
             TimePickerDialog(requireContext(), timeSetListener, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE),true).show()
         }
 
@@ -76,15 +95,17 @@ class AddFragment : Fragment() {
     private fun insertDataToDatabase() {
 
         val title = addTitle_et.text.toString()
-        val date = addDate_et_old.text.toString()
+        val date = addDate_text_old.text.toString()
         val content = addContents_et.text.toString()
         val isChecked = addIsSolved_CheckBox.isChecked
-        Log.d("date check", "${date}, ${stringToDate(date, "EEE MMM d HH:mm:ss zz yyyy")}")
+        val suspect = add_suspect_button.text.toString()
 
-        if (inputCheck(title, content)){
+        Log.d("date check", "${date}, ${stringToDate(date)}")
+
+        if (inputCheck(title, content, date)){
             //Creat Crime Object
-            val crime = stringToDate(date, "EEE MMM d HH:mm:ss zz yyyy")?.let {
-                Crime(0, title, it, isChecked)
+            val crime = stringToDate(date)?.let {
+                Crime(0, title, it, isChecked, suspect)
             }
             // Add Data to Database
             if (crime != null) {
@@ -99,21 +120,22 @@ class AddFragment : Fragment() {
         }
     }
 
-    private fun inputCheck(title: String, content: String): Boolean {
-        return !(TextUtils.isEmpty(title) && TextUtils.isEmpty(content))
+    private fun inputCheck(title: String, content: String, date: String): Boolean {
+        return !((TextUtils.isEmpty(title) && TextUtils.isEmpty(content))  || TextUtils.isEmpty(date))
+
     }
 
     private fun isPackageExpired(date: String): Boolean {
         var isExpired = false
-        val expiredDate = stringToDate(date, "EEE MMM d HH:mm:ss zz yyyy")
+        val expiredDate = stringToDate(date)
         if (Date().after(expiredDate)) isExpired = true
         return isExpired
     }
 
-    private fun stringToDate(aDate: String?, aFormat: String): Date? {
+    private fun stringToDate(aDate: String?): Date? {
         if (aDate == null) return null
         val pos = ParsePosition(0)
-        val simpledateformat = SimpleDateFormat(aFormat)
+        val simpledateformat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss") //""EEE MMM d HH:mm:ss zz yyyy")
         return simpledateformat.parse(aDate, pos)
     }
 
@@ -127,4 +149,6 @@ class AddFragment : Fragment() {
         }
         return date
     }
+
+
 }

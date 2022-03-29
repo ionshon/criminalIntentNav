@@ -10,8 +10,9 @@ import java.util.*
 @Entity(tableName = "crime_table")
 data class Crime(
     @PrimaryKey(autoGenerate = true)
-    val id: Int,
-    val title: String,
-    val date: Date,
-    val isSolved: Boolean
+    val id: Int = 1,
+    val title: String = "",
+    val date: Date = Date(),
+    val isSolved: Boolean = false,
+    var suspect: String = ""
 ): Parcelable

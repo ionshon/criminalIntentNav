@@ -8,6 +8,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.inu.andoid.criminalintentnav.R
 import com.inu.andoid.criminalintentnav.model.Crime
 import kotlinx.android.synthetic.main.list_item_crime.view.*
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.*
 
 class ListAdapter: RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
 
@@ -23,7 +27,16 @@ class ListAdapter: RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
         val currentItem = crimeList[position]
         holder.itemView.crime_item_id.text = currentItem.id.toString()
         holder.itemView.crime_item_title.text = currentItem.title
-        holder.itemView.crime_item_date.text = currentItem.date.toString()
+        // Date 출력 형식 변경
+        val cal = Calendar.getInstance()
+        val dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val tz: TimeZone = cal.getTimeZone()
+        // Getting zone id
+        val zoneId: ZoneId = tz.toZoneId()
+        val localDateTime: LocalDateTime =
+            LocalDateTime.ofInstant(currentItem.date.toInstant(), zoneId)
+        val nowString = localDateTime.format(dtf)
+        holder.itemView.crime_item_date.text = nowString
         holder.itemView.crime_item_solved.visibility = if (currentItem.isSolved) {
             View.VISIBLE
         } else {
