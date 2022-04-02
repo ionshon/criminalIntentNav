@@ -18,5 +18,5 @@ data class Crime(
     var suspect: String = "",
 ): Parcelable {
     val photoFileName
-        get() = "IMG_$id.jpg"
+        get() = "IMG_$id.png"
 }

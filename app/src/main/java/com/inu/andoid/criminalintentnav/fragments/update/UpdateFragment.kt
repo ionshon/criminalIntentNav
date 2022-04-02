@@ -63,7 +63,7 @@ class UpdateFragment : Fragment() {
     private lateinit var  permissionLauncher: ActivityResultLauncher<String>
     private lateinit var photoFile: File
     private lateinit var photoUri: Uri
-    val fileDir =  context?.applicationContext?.filesDir
+    val fileDir =  context?.filesDir
     val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
     val storageDir: File? = context?.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
     val file = File.createTempFile(
@@ -196,37 +196,39 @@ class UpdateFragment : Fragment() {
         }
         photoButton.apply {
             val packageManager: PackageManager = requireActivity().packageManager
+            val captureImage = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
 
-       /*     val resolvedActivity: ResolveInfo? = packageManager.resolveActivity(
-                captureImage, PackageManager.MATCH_DEFAULT_ONLY)*/
-            photoFile = file //mCrimeViewModel.getPhotoFile(crime)
+           /* val resolvedActivity: ResolveInfo? = packageManager.resolveActivity(
+                captureImage, PackageManager.MATCH_DEFAULT_ONLY)
+             if (resolvedActivity == null) {
+                 Log.d("photo","cameraActivity")
+                 isEnabled = false
+             }*/
+
+         //   photoFile = mCrimeViewModel.getPhotoFile(crime)
             photoUri = FileProvider.getUriForFile(requireActivity(),
                 "com.inu.andoid.criminalintentnav.fileprovider",file)
-            val captureImage = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            captureImage.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
 
-           /* if (resolvedActivity == null) {
-                Log.d("photo","cameraActivity")
-                isEnabled = false
-            }*/
             setOnClickListener {
+                captureImage.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
+                /*val cameraActivities: List<ResolveInfo> =
+                      packageManager.queryIntentActivities(captureImage, PackageManager.MATCH_DEFAULT_ONLY)
+
+                for (cameraActivity in cameraActivities) {
+                      requireActivity().grantUriPermission(cameraActivity.activityInfo.packageName,
+                      photoUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                }*/
+
                 if (ContextCompat.checkSelfPermission(requireContext(),
                     Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                     // 권한 있는 경우 실행할 코드...
                     getResultPhoto.launch(captureImage)
-                    Log.d("photo permissions :", "ok")
+                    Log.d("photo permissions :", "ok! ${file}, ${mCrimeViewModel.getPhotoFile(crime)}")
                 } else {// 권한 없는 경우, 권한 요청
                     permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
                     Log.d("phto permissions :", "no")
                 }
 
-              /*  val cameraActivities: List<ResolveInfo> =
-                    packageManager.queryIntentActivities(captureImage, PackageManager.MATCH_DEFAULT_ONLY)
-
-                for (cameraActivity in cameraActivities) {
-                    requireActivity().grantUriPermission(cameraActivity.activityInfo.packageName,
-                    photoUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                }*/
               //  getResultPhoto.launch(captureImage)
             }
         }
@@ -267,14 +269,15 @@ class UpdateFragment : Fragment() {
     }
 
     private fun updatePhotoView(){
-        if (photoFile.exists()){
-            val bitmap = getScaledBitmap(photoFile.path, requireActivity())
+        if (file.exists()){
+          //  val bitmap = getScaledBitmap(photoFile.path, requireActivity())
+            val bitmap = getScaledBitmap(file.path, requireActivity())
             photoView.setImageBitmap(bitmap)
             Log.d("photofile: ", "exist!")
         }else{
             photoView.setImageDrawable(null)
 
-            Log.d("photofile: ", "no exist!, ${photoFile.path}")
+            Log.d("photofile: ", "no exist!, ${file.path}")
         }
     }
     private fun updateItem() {

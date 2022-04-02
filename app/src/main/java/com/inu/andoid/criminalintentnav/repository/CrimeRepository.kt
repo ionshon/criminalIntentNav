@@ -18,8 +18,6 @@ class CrimeRepository(private val crimeDao: CrimeDao): Application(){
 
     val readAllData: LiveData<List<Crime>> = crimeDao.readAllData()
 
-//    var filePath : String = file.absolutePath
-
     fun getPhotoFile(crime: Crime): File = File(UpdateFragment().fileDir, crime.photoFileName)
   /* fun getPhotoFile(crime: Crime): File = File.createTempFile(
        "JPEG_${timeStamp}_",
