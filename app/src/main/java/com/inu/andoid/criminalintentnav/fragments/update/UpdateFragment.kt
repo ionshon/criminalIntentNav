@@ -1,30 +1,42 @@
 package com.inu.andoid.criminalintentnav.fragments.update
 
+import android.Manifest
 import android.app.Activity
 import android.app.Activity.RESULT_OK
 import android.app.AlertDialog
 import android.app.DatePickerDialog
+import android.content.DialogInterface
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
+import android.media.Image
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.provider.ContactsContract
+import android.provider.MediaStore
+import android.provider.Settings
 import android.text.TextUtils
 import android.text.format.DateFormat
 import android.util.Log
 import android.view.*
-import android.widget.Button
-import android.widget.Toast
+import android.widget.*
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import com.inu.andoid.criminalintentnav.BuildConfig
 import com.inu.andoid.criminalintentnav.R
+import com.inu.andoid.criminalintentnav.getScaledBitmap
 import com.inu.andoid.criminalintentnav.model.Crime
 import com.inu.andoid.criminalintentnav.viewmodel.CrimeViewModel
 import kotlinx.android.synthetic.main.fragment_update.*
 import kotlinx.android.synthetic.main.fragment_update.view.*
+import java.io.File
 import java.text.ParsePosition
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -34,7 +46,7 @@ import java.util.*
 
 
 private const val DATE_FORMAT = "yyyy년 M월 d일 H시 m분, E요일"
-private const val REQUEST_CONTACT = 1
+private const val REQUEST_PHOTO = 2
 class UpdateFragment : Fragment() {
 
     private val args by navArgs<UpdateFragmentArgs>()
@@ -44,7 +56,22 @@ class UpdateFragment : Fragment() {
     private lateinit var reportButton: Button
     private lateinit var suspectButton: Button
     private lateinit var getResult: ActivityResultLauncher<Intent>
-
+    private lateinit var getResultPhoto: ActivityResultLauncher<Intent>
+    private lateinit var photoButton: Button
+    private lateinit var photoView: ImageView
+    // permissionLauncher 선언
+    private lateinit var  permissionLauncher: ActivityResultLauncher<String>
+    private lateinit var photoFile: File
+    private lateinit var photoUri: Uri
+    val fileDir =  context?.applicationContext?.filesDir
+    val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+    val storageDir: File? = context?.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+    val file = File.createTempFile(
+        "JPEG_${timeStamp}_",
+        ".jpg",
+        storageDir
+    )
+    var filePath = file.absolutePath
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +87,9 @@ class UpdateFragment : Fragment() {
 
         reportButton = view.update_report_button as Button
         suspectButton = view.update_suspect_button as Button
+        photoButton = view.update_camera_button as Button
+        photoView = view.update_photo_iv as ImageView
+
 
         view.updateTitle_et.setText(args.currentCrime.title)
         // Date 출력 형식 변경
@@ -100,6 +130,7 @@ class UpdateFragment : Fragment() {
 
             view.update_button.setOnClickListener {
                 updateItem()
+                updatePhotoView()
             }
 
         reportButton.setOnClickListener {
@@ -114,10 +145,6 @@ class UpdateFragment : Fragment() {
             }
         }
 
-        suspectButton.setOnClickListener {
-            val pickContactIntent = Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI)
-            getResult.launch(pickContactIntent)
-        }
 
         getResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult())
         { it ->
@@ -144,7 +171,88 @@ class UpdateFragment : Fragment() {
                       //  mCrimeViewModel.updateCrime(crime)
                         suspectButton.text = suspect
                     }
+                 //   updatePhotoView()
                 }
+            }
+        }
+
+        suspectButton.setOnClickListener {
+            val pickContactIntent = Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI)
+            getResult.launch(pickContactIntent)
+        }
+
+        getResultPhoto = registerForActivityResult(ActivityResultContracts.StartActivityForResult())
+        {
+            when {
+                it.resultCode != RESULT_OK -> {
+                    Toast.makeText(requireContext(), "photo no ok", Toast.LENGTH_SHORT).show()
+                }
+                it.resultCode == RESULT_OK -> {
+                    Log.d( "getResultPhoto","photo  ok")
+             //       requireActivity().revokeUriPermission(photoUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    updatePhotoView()
+                }
+            }
+        }
+        photoButton.apply {
+            val packageManager: PackageManager = requireActivity().packageManager
+
+       /*     val resolvedActivity: ResolveInfo? = packageManager.resolveActivity(
+                captureImage, PackageManager.MATCH_DEFAULT_ONLY)*/
+            photoFile = file //mCrimeViewModel.getPhotoFile(crime)
+            photoUri = FileProvider.getUriForFile(requireActivity(),
+                "com.inu.andoid.criminalintentnav.fileprovider",file)
+            val captureImage = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            captureImage.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
+
+           /* if (resolvedActivity == null) {
+                Log.d("photo","cameraActivity")
+                isEnabled = false
+            }*/
+            setOnClickListener {
+                if (ContextCompat.checkSelfPermission(requireContext(),
+                    Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                    // 권한 있는 경우 실행할 코드...
+                    getResultPhoto.launch(captureImage)
+                    Log.d("photo permissions :", "ok")
+                } else {// 권한 없는 경우, 권한 요청
+                    permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                    Log.d("phto permissions :", "no")
+                }
+
+              /*  val cameraActivities: List<ResolveInfo> =
+                    packageManager.queryIntentActivities(captureImage, PackageManager.MATCH_DEFAULT_ONLY)
+
+                for (cameraActivity in cameraActivities) {
+                    requireActivity().grantUriPermission(cameraActivity.activityInfo.packageName,
+                    photoUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                }*/
+              //  getResultPhoto.launch(captureImage)
+            }
+        }
+
+        permissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                // 권한 있는 경우 실행할 코드...
+            } else {
+                AlertDialog.Builder(requireContext())
+                    .setTitle("미디어 접근 권한")
+                    .setMessage("미디어를 첨부하시려면, 앱 접근 권한을 허용해 주세요.")
+                    .setPositiveButton("확인", DialogInterface.OnClickListener { dialog, which ->
+                        val intent = Intent()
+                        intent.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                        val uri: Uri = Uri.fromParts(
+                            "package",
+                            BuildConfig.APPLICATION_ID, null
+                        )
+                        intent.data = uri
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        startActivity(intent)
+                    })
+                    .create()
+                    .show()
             }
         }
         // Add menu
@@ -153,35 +261,22 @@ class UpdateFragment : Fragment() {
         return view
     }
 
-    /*override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        when {
-            requestCode != Activity.RESULT_OK -> {
+    override fun onDetach() {
+        super.onDetach()
+        requireActivity().revokeUriPermission(photoUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+    }
 
-                Log.d("suspect: ", "no")
-                return
-            }
-            requestCode == REQUEST_CONTACT && data != null -> {
-                val contactUri: Uri = data.data ?: return
-                // 쿼리에서 값으로 반환할 필드를 지정한다
-                val queryFields = arrayOf(ContactsContract.Contacts.DISPLAY_NAME)
-                // 쿼리를 수행한다
-                val cursor = requireActivity().contentResolver.query(contactUri, queryFields, null, null, null)
-                cursor?.use {
-                    // 쿼리 결과 데이터가 있는지 확인한다
-                    if (it.count == 0) {
-                        return
-                    }
-                    // 첫 번째 데이터 행의 첫 번째 열의 값을 가져온다
-                    // 이값이 용의자의 이름이다
-                    it.moveToFirst()
-                    val suspect = it.getString(0)
-                    crime.suspect = suspect
-                    mCrimeViewModel.updateCrime(crime)
-                    suspectButton.text = suspect
-                }
-            }
+    private fun updatePhotoView(){
+        if (photoFile.exists()){
+            val bitmap = getScaledBitmap(photoFile.path, requireActivity())
+            photoView.setImageBitmap(bitmap)
+            Log.d("photofile: ", "exist!")
+        }else{
+            photoView.setImageDrawable(null)
+
+            Log.d("photofile: ", "no exist!, ${photoFile.path}")
         }
-    }*/
+    }
     private fun updateItem() {
         val title = updateTitle_et.text.toString()
         val date = updateDate_Text.text.toString()
@@ -192,9 +287,9 @@ class UpdateFragment : Fragment() {
         if (inputCheck(title, content, date)) {
 
             Log.d("date updateItem: ", date)
-            val crime = stringToDate(date)?.let {
+            crime = stringToDate(date)?.let {
                 Crime(args.currentCrime.id, title, it, isChecked, suspcct)
-            }
+            }!!
             if (crime != null) {
                 mCrimeViewModel.updateCrime(crime)
             }
@@ -242,22 +337,21 @@ class UpdateFragment : Fragment() {
     }
 
     private fun getCrimeReport(): String{
-        val solvedString = if (crime.isSolved) {
+        val solvedString = if (args.currentCrime.isSolved) {
             getString(R.string.crime_report_solved)
         } else {
             getString(R.string.crime_report_unsolved)
         }
         val dateString = DateFormat.format(
             com.inu.andoid.criminalintentnav.fragments.update.DATE_FORMAT,
-            crime.date).toString()
-        Log.d("date format", crime.date.toString())
-        val suspect = if (crime.suspect.isBlank()) {
+            args.currentCrime.date).toString()
+        val suspect = if (args.currentCrime.suspect.isBlank()) {
             getString(R.string.crime_report_no_suspect)
         } else {
-            getString(R.string.crime_report_suspect, crime.suspect)
+            getString(R.string.crime_report_suspect, args.currentCrime.suspect)
         }
         return getString(R.string.crime_report,
-            crime.title, dateString, solvedString, suspect)
+            args.currentCrime.title, dateString, solvedString, suspect)
     }
 }
 

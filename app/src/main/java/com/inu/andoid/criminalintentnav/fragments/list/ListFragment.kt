@@ -30,7 +30,7 @@ class ListFragment : Fragment() {
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
         // CrimeViewModel
-        mCrimeViewModel = ViewModelProvider(this).get(CrimeViewModel::class.java)
+        mCrimeViewModel = ViewModelProvider(this)[CrimeViewModel::class.java]
         mCrimeViewModel.readAllData.observe(viewLifecycleOwner, Observer { crime ->
             adapter.setData(crime)
         })

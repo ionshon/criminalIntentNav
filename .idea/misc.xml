@@ -4,6 +4,7 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="..\:/study/RealAndroidBook/criminalIntentNav/app/src/main/res/drawable/round.xml" value="0.244" />
+        <entry key="..\:/study/RealAndroidBook/criminalIntentNav/app/src/main/res/drawable/square_background_border_black.xml" value="0.228" />
         <entry key="..\:/study/RealAndroidBook/criminalIntentNav/app/src/main/res/layout/activity_main.xml" value="0.1" />
         <entry key="..\:/study/RealAndroidBook/criminalIntentNav/app/src/main/res/layout/fragment_add.xml" value="0.22" />
         <entry key="..\:/study/RealAndroidBook/criminalIntentNav/app/src/main/res/layout/fragment_date_picker.xml" value="0.1" />
@@ -11,6 +12,7 @@
         <entry key="..\:/study/RealAndroidBook/criminalIntentNav/app/src/main/res/layout/fragment_update.xml" value="0.25" />
         <entry key="..\:/study/RealAndroidBook/criminalIntentNav/app/src/main/res/layout/list_item_crime.xml" value="0.33" />
         <entry key="..\:/study/RealAndroidBook/criminalIntentNav/app/src/main/res/menu/delete_menu.xml" value="0.1625" />
+        <entry key="..\:/study/RealAndroidBook/criminalIntentNav/app/src/main/res/xml/files.xml" value="0.2171875" />
       </map>
     </option>
   </component>

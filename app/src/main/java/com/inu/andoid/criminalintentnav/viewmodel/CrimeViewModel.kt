@@ -9,6 +9,7 @@ import com.inu.andoid.criminalintentnav.repository.CrimeRepository
 import com.inu.andoid.criminalintentnav.model.Crime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
 
 class CrimeViewModel(application: Application): AndroidViewModel(application) {
 
@@ -19,6 +20,10 @@ class CrimeViewModel(application: Application): AndroidViewModel(application) {
         val crimeDao = CrimeDatabase.getDatabase(application).crimeDao()
         repository  = CrimeRepository(crimeDao)
         readAllData = repository.readAllData
+    }
+
+    fun getPhotoFile(crime: Crime): File {
+        return repository.getPhotoFile(crime)
     }
 
     fun addCrime(crime: Crime){

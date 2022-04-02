@@ -4,6 +4,7 @@ import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.android.parcel.Parcelize
+import java.net.FileNameMap
 import java.util.*
 
 @Parcelize
@@ -14,5 +15,8 @@ data class Crime(
     val title: String = "",
     val date: Date = Date(),
     val isSolved: Boolean = false,
-    var suspect: String = ""
-): Parcelable
+    var suspect: String = "",
+): Parcelable {
+    val photoFileName
+        get() = "IMG_$id.jpg"
+}
