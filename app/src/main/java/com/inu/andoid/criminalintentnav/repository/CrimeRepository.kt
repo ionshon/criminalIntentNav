@@ -13,12 +13,12 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
-class CrimeRepository(private val crimeDao: CrimeDao): Application(){
+class CrimeRepository(private val crimeDao: CrimeDao){
 
-
+  //  val context = UpdateFragment().context
     val readAllData: LiveData<List<Crime>> = crimeDao.readAllData()
-
-    fun getPhotoFile(crime: Crime): File = File(UpdateFragment().fileDir, crime.photoFileName)
+  //  val fileDir = context?.getExternalFilesDir(Environment.DIRECTORY_PICTURES) //UpdateFragment().context?.cacheDir //applicationContext.cacheDir
+    fun getPhotoFile(crime: Crime): File = File("", crime.photoFileName)
   /* fun getPhotoFile(crime: Crime): File = File.createTempFile(
        "JPEG_${timeStamp}_",
        ".jpg",
