@@ -7,7 +7,10 @@ import android.app.DatePickerDialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.ContactsContract
 import android.provider.MediaStore
@@ -19,8 +22,10 @@ import android.view.*
 import android.widget.*
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
@@ -34,6 +39,8 @@ import com.inu.andoid.criminalintentnav.viewmodel.CrimeViewModel
 import kotlinx.android.synthetic.main.fragment_update.*
 import kotlinx.android.synthetic.main.fragment_update.view.*
 import java.io.File
+import java.io.IOException
+import java.io.InputStream
 import java.text.ParsePosition
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -270,17 +277,44 @@ class UpdateFragment() : Fragment() {
     }
 
     // updateFragment 내 썸네일 이미지 설정
-    fun updatePhotoView(file: File){
+    private fun updatePhotoView(file: File){
         if (file.exists()){
           //  val bitmap = getScaledBitmap(photoFile.path, requireActivity())
             val bitmap = getScaledBitmap(file.path, requireActivity())
-            photoView.setImageBitmap(bitmap)
+            photoUri = FileProvider.getUriForFile(requireActivity(),
+                "com.inu.andoid.criminalintentnav.fileprovider",file)
+            photoView.setImageBitmap(rotateImage(photoUri, bitmap))
             Log.d("photofile: ", "exist!")
         }else{
             photoView.setImageDrawable(null)
 
             Log.d("photofile: ", "no exist!, ${file.path}")
         }
+    }
+
+    // 이미지 회전문제
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    @Throws(IOException::class)
+    private fun rotateImage(uri: Uri, bitmap: Bitmap): Bitmap? {
+        val resolver = context?.contentResolver
+        val `in`: InputStream = resolver?.openInputStream(uri)!!
+        val exif = ExifInterface(`in`)
+        `in`.close()
+        val orientation: Int =
+            exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> {
+                matrix.postRotate(90F)
+            }
+            ExifInterface.ORIENTATION_ROTATE_180 -> {
+                matrix.postRotate(180F)
+            }
+            ExifInterface.ORIENTATION_ROTATE_270 -> {
+                matrix.postRotate(270F)
+            }
+        }
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
     // update 버튼 클릭시 임시 파일이름을 id 로 변경
