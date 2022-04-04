@@ -25,18 +25,6 @@
         <action
             android:id="@+id/action_addFragment_to_listFragment"
             app:destination="@id/listFragment" />
-        <action
-            android:id="@+id/action_addFragment_to_datePickerFragment2"
-            app:destination="@id/datePickerFragment2" />
-    </fragment>
-    <fragment
-        android:id="@+id/datePickerFragment2"
-        android:name="com.inu.andoid.criminalintentnav.fragments.add.DatePickerFragment"
-        android:label="fragment_date_picker"
-        tools:layout="@layout/fragment_date_picker" >
-        <action
-            android:id="@+id/action_datePickerFragment2_to_addFragment"
-            app:destination="@id/addFragment" />
     </fragment>
     <fragment
         android:id="@+id/updateFragment"
@@ -48,6 +36,18 @@
             app:destination="@id/listFragment" />
         <argument
             android:name="currentCrime"
+            app:argType="com.inu.andoid.criminalintentnav.model.Crime" />
+        <action
+            android:id="@+id/action_updateFragment_to_dialogFragment"
+            app:destination="@id/dialogFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/dialogFragment"
+        android:name="com.inu.andoid.criminalintentnav.fragments.update.DialogFragment"
+        android:label="dialog"
+        tools:layout="@layout/fragment_dialog" >
+        <argument
+            android:name="dialogCrime"
             app:argType="com.inu.andoid.criminalintentnav.model.Crime" />
     </fragment>
 </navigation>

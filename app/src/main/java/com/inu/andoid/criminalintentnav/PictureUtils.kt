@@ -3,13 +3,14 @@ package com.inu.andoid.criminalintentnav
 import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.graphics.Point
 
 
 fun getScaledBitmap(path: String, activity: Activity): Bitmap{
     val size = Point()
 
-    @Suppress("DEPRECATION")
+  //  @Suppress("DEPRECATION")
     activity.windowManager.defaultDisplay.getSize(size)
 
     return getScaledBitmap(path, size.x, size.y)
@@ -41,4 +42,18 @@ fun getScaledBitmap(path: String, destWidth: Int, destHeight: Int): Bitmap{
 
     // 최종 bitmap 생성
     return BitmapFactory.decodeFile(path, options)
+}
+
+// 이미지 회전 함수
+fun rotateImage(src: Bitmap, degree: Float): Bitmap {
+
+    // Matrix 객체 생성
+    val matrix = Matrix()
+    // 회전 각도 셋팅
+    matrix.postRotate(degree)
+    // 이미지와 Matrix 를 셋팅해서 Bitmap 객체 생성
+    return Bitmap.createBitmap(
+        src, 0, 0, src.width,
+        src.height, matrix, true
+    )
 }

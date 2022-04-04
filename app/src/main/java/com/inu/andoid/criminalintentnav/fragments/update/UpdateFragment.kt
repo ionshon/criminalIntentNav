@@ -31,7 +31,10 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.inu.andoid.criminalintentnav.BuildConfig
 import com.inu.andoid.criminalintentnav.R
+import com.inu.andoid.criminalintentnav.fragments.list.ListFragmentDirections
+import com.inu.andoid.criminalintentnav.getScaledBitmap
 import com.inu.andoid.criminalintentnav.model.Crime
+import com.inu.andoid.criminalintentnav.rotateImage
 import com.inu.andoid.criminalintentnav.viewmodel.CrimeViewModel
 import kotlinx.android.synthetic.main.fragment_update.*
 import kotlinx.android.synthetic.main.fragment_update.view.*
@@ -109,6 +112,11 @@ class UpdateFragment : Fragment() {
 
         readPhotoView(args.currentCrime)
 
+        view.update_photo_iv.setOnClickListener{
+            val action = UpdateFragmentDirections.actionUpdateFragmentToDialogFragment(args.currentCrime)
+            findNavController().navigate(action)
+        }
+
         view.updateDate_button.setOnClickListener {
             val cal = Calendar.getInstance()    //캘린더뷰 만들기
 
@@ -157,6 +165,7 @@ class UpdateFragment : Fragment() {
                     cursor?.use {
                         // 쿼리 결과 데이터가 있는지 확인한다
                         if (it.count == 0) {
+                            return@registerForActivityResult
                         }
                         // 첫 번째 데이터 행의 첫 번째 열의 값을 가져온다
                         // 이값이 용의자의 이름이다
@@ -193,7 +202,7 @@ class UpdateFragment : Fragment() {
             val captureImage = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
             photoUri = FileProvider.getUriForFile(requireActivity(),
                 "com.inu.andoid.criminalintentnav.fileprovider",
-                file)
+                file) // 임시 이미지 명
 
             setOnClickListener {
                 captureImage.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
@@ -256,17 +265,18 @@ class UpdateFragment : Fragment() {
     private fun readPhotoView(crime: Crime) {
         val resolver = context?.contentResolver
         mCrimeViewModel = ViewModelProvider(this)[CrimeViewModel::class.java]
+        photoFile = File(context?.cacheDir, mCrimeViewModel.getPhotoFile(args.currentCrime).toString())
         photoUri = FileProvider.getUriForFile(requireActivity(),
-            "com.inu.andoid.criminalintentnav.fileprovider",
-            File(context?.cacheDir, mCrimeViewModel.getPhotoFile(args.currentCrime).toString()))
+            "com.inu.andoid.criminalintentnav.fileprovider", photoFile)
      /*   if (file.length() == 0L) {
             file.delete()
         } 없어도 onDetach() 시 삭제시 해결됨*/
         try {
             val instream: InputStream? = resolver?.openInputStream(photoUri)
-            val imgBitmap = BitmapFactory.decodeStream(instream)
-       //     imgBitmap = rotateImage(imgBitmap, 90F)
-            photoView.setImageBitmap(imgBitmap) // 선택한 이미지 이미지뷰에 셋
+            var imgBitmap = BitmapFactory.decodeStream(instream)
+            var imgBitmap2 = getScaledBitmap(photoFile.path, requireActivity())
+            imgBitmap2 = rotateImage(imgBitmap2, 90F)
+            photoView.setImageBitmap(imgBitmap2) // 선택한 이미지 이미지뷰에 셋
             instream?.close() // 스트림 닫아주기
             Log.d("photo: ","파일 불러오기 성공")
         } catch (e: java.lang.Exception) {
@@ -275,29 +285,16 @@ class UpdateFragment : Fragment() {
         }
     }
 
-    // 이미지 회전 함수
-    private fun rotateImage(src: Bitmap, degree: Float): Bitmap? {
-
-        // Matrix 객체 생성
-        val matrix = Matrix()
-        // 회전 각도 셋팅
-        matrix.postRotate(degree)
-        // 이미지와 Matrix 를 셋팅해서 Bitmap 객체 생성
-        return Bitmap.createBitmap(
-            src, 0, 0, src.width,
-            src.height, matrix, true
-        )
-    }
-
     // 사진 찍고 난 후
     private fun updatePhotoView(){
 
         val resolver = context?.contentResolver
         try {
-            val instream: InputStream? = resolver?.openInputStream(photoUri)
-            val imgBitmap = BitmapFactory.decodeStream(instream)
-         //   imgBitmap = rotateImage(imgBitmap, 0F)
-            photoView.setImageBitmap(imgBitmap) // 선택한 이미지 이미지뷰에 셋
+            val instream: InputStream? = resolver?.openInputStream(photoUri) // 임시 이미지 Uri
+            var imgBitmap = BitmapFactory.decodeStream(instream)
+            var imgBitmap2 = getScaledBitmap(file.path, requireActivity())
+            imgBitmap2 = rotateImage(imgBitmap2, 90F) // 핸드폰에서 올바르게
+            photoView.setImageBitmap(imgBitmap2) // 선택한 이미지 이미지뷰에 셋
             instream?.close() // 스트림 닫아주기
 
         } catch (e: java.lang.Exception) {
