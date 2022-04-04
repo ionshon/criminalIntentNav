@@ -1,11 +1,9 @@
 package com.inu.andoid.criminalintentnav.repository
 
-import android.app.Application
 import android.content.Context
 import android.os.Environment
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.ViewModelProvider.NewInstanceFactory.Companion.instance
-import com.inu.andoid.criminalintentnav.MainActivity
+import androidx.lifecycle.ViewModel
 import com.inu.andoid.criminalintentnav.data.CrimeDao
 import com.inu.andoid.criminalintentnav.fragments.update.UpdateFragment
 import com.inu.andoid.criminalintentnav.model.Crime
@@ -13,17 +11,26 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
-class CrimeRepository(private val crimeDao: CrimeDao){
+class CrimeRepository constructor(context: Context, private val crimeDao: CrimeDao){
+    companion object {
+        private var INSTANCE: CrimeRepository? = null
 
-  //  val context = UpdateFragment().context
+        fun initialize(context: Context, crimeDao: CrimeDao) {
+            if (INSTANCE == null) {
+                INSTANCE = CrimeRepository(context, crimeDao)
+            }
+        }
+
+        fun get(): CrimeRepository {
+            return INSTANCE ?:
+            throw IllegalStateException("CrimeRepository must be initialized")
+        }
+    }
+
     val readAllData: LiveData<List<Crime>> = crimeDao.readAllData()
-  //  val fileDir = context?.getExternalFilesDir(Environment.DIRECTORY_PICTURES) //UpdateFragment().context?.cacheDir //applicationContext.cacheDir
-    fun getPhotoFile(crime: Crime): File = File("", crime.photoFileName)
-  /* fun getPhotoFile(crime: Crime): File = File.createTempFile(
-       "JPEG_${timeStamp}_",
-       ".jpg",
-       storageDir
-   )*/
+    val fileDir = context?.cacheDir
+   // val storageDir: File? = context?.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+    fun getPhotoFile(crime: Crime): File = File(fileDir, crime.photoFileName)
 
     suspend fun addCrime(crime: Crime){
         crimeDao.addCrime(crime)

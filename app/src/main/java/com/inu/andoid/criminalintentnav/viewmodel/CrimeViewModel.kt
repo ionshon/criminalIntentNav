@@ -12,13 +12,13 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 class CrimeViewModel(application: Application): AndroidViewModel(application) {
-
+    private val context = getApplication<Application>().applicationContext
     val readAllData : LiveData<List<Crime>>
     private val repository: CrimeRepository
 
     init {
         val crimeDao = CrimeDatabase.getDatabase(application).crimeDao()
-        repository  = CrimeRepository(crimeDao)
+        repository  = CrimeRepository(context, crimeDao)
         readAllData = repository.readAllData
     }
 
