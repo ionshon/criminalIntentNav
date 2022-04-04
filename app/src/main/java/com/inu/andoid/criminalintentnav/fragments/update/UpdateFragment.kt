@@ -71,7 +71,6 @@ class UpdateFragment : Fragment() {
         ".jpg",
         storageDir
     )
-    var filePath = file.absolutePath
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -265,10 +264,14 @@ class UpdateFragment : Fragment() {
 
     override fun onDetach() {
         super.onDetach()
-        requireActivity().revokeUriPermission(photoUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        file.delete()
     }
 
-    private fun updatePhotoView(){
+    private fun readPhotoView() {
+
+
+    }
+    private fun updatePhotoView(){ // 이름바꾸기 추가
         if (file.exists()){
           //  val bitmap = getScaledBitmap(photoFile.path, requireActivity())
             val bitmap = getScaledBitmap(file.path, requireActivity())

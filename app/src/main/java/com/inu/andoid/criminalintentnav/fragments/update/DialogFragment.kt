@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.navArgs
@@ -48,15 +49,18 @@ class DialogFragment : Fragment() {
 
         readPhotoView()
 
+
+
         return view
     }
 
-       private fun readPhotoView() {
-           val resolver = context?.contentResolver
-           mCrimeViewModel = ViewModelProvider(this)[CrimeViewModel::class.java]
-           photoFile = File(context?.cacheDir, mCrimeViewModel.getPhotoFile(crime).toString())
-           photoUri = FileProvider.getUriForFile(requireActivity(),
-               "com.inu.andoid.criminalintentnav.fileprovider", photoFile)
+
+    private fun readPhotoView() {
+        val resolver = context?.contentResolver
+        mCrimeViewModel = ViewModelProvider(this)[CrimeViewModel::class.java]
+        photoFile = File(context?.cacheDir, mCrimeViewModel.getPhotoFile(crime).toString())
+        photoUri = FileProvider.getUriForFile(requireActivity(),
+           "com.inu.andoid.criminalintentnav.fileprovider", photoFile)
 
         try {
             val instream: InputStream? = resolver?.openInputStream(photoUri)
@@ -71,5 +75,7 @@ class DialogFragment : Fragment() {
                     "")
         }
     }
+
+
 }
 
