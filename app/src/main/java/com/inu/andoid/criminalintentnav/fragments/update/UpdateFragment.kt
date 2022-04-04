@@ -1,15 +1,15 @@
 package com.inu.andoid.criminalintentnav.fragments.update
 
 import android.Manifest
+import android.app.Activity
 import android.app.Activity.RESULT_OK
 import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
+import android.content.pm.ResolveInfo
+import android.media.Image
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
@@ -31,15 +31,12 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.inu.andoid.criminalintentnav.BuildConfig
 import com.inu.andoid.criminalintentnav.R
-import com.inu.andoid.criminalintentnav.fragments.list.ListFragmentDirections
 import com.inu.andoid.criminalintentnav.getScaledBitmap
 import com.inu.andoid.criminalintentnav.model.Crime
-import com.inu.andoid.criminalintentnav.rotateImage
 import com.inu.andoid.criminalintentnav.viewmodel.CrimeViewModel
 import kotlinx.android.synthetic.main.fragment_update.*
 import kotlinx.android.synthetic.main.fragment_update.view.*
 import java.io.File
-import java.io.InputStream
 import java.text.ParsePosition
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -49,6 +46,7 @@ import java.util.*
 
 
 private const val DATE_FORMAT = "yyyy년 M월 d일 H시 m분, E요일"
+private const val REQUEST_PHOTO = 2
 class UpdateFragment : Fragment() {
 
     private val args by navArgs<UpdateFragmentArgs>()
@@ -65,14 +63,15 @@ class UpdateFragment : Fragment() {
     private lateinit var  permissionLauncher: ActivityResultLauncher<String>
     private lateinit var photoFile: File
     private lateinit var photoUri: Uri
-    private val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
-    private val storageDir: File? = context?.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-    private val file = File.createTempFile(
+    val fileDir =  context?.filesDir
+    val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+    val storageDir: File? = context?.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+    val file = File.createTempFile(
         "JPEG_${timeStamp}_",
-        ".png",
+        ".jpg",
         storageDir
     )
-  //  var filePath = file.absolutePath
+    var filePath = file.absolutePath
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,7 +82,7 @@ class UpdateFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-
+        // Inflate the layout for this fragment
         val view = inflater.inflate(R.layout.fragment_update, container, false)
 
         reportButton = view.update_report_button as Button
@@ -91,31 +90,20 @@ class UpdateFragment : Fragment() {
         photoButton = view.update_camera_button as Button
         photoView = view.update_photo_iv as ImageView
 
-        view.update_button.setOnClickListener {
-            updateItem()
-            saveBitmapToJpeg() // 임시 이미지 파일이름을 id로 변경 저장
-        }
 
         view.updateTitle_et.setText(args.currentCrime.title)
         // Date 출력 형식 변경
         val cal = Calendar.getInstance()
         val dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-        val tz: TimeZone = cal.timeZone
+        val tz: TimeZone = cal.getTimeZone()
         // Getting zone id
         val zoneId: ZoneId = tz.toZoneId()
         val localDateTime: LocalDateTime =
             LocalDateTime.ofInstant(args.currentCrime.date.toInstant(), zoneId)
         val nowString = localDateTime.format(dtf)
-        view.updateDate_Text.text = nowString
+        view.updateDate_Text.setText(nowString)
         view.updateIsSolved_CheckBox.isChecked= args.currentCrime.isSolved
         view.update_suspect_button.setText("용의자 : " + args.currentCrime.suspect)
-
-        readPhotoView(args.currentCrime)
-
-        view.update_photo_iv.setOnClickListener{
-            val action = UpdateFragmentDirections.actionUpdateFragmentToDialogFragment(args.currentCrime)
-            findNavController().navigate(action)
-        }
 
         view.updateDate_button.setOnClickListener {
             val cal = Calendar.getInstance()    //캘린더뷰 만들기
@@ -126,7 +114,8 @@ class UpdateFragment : Fragment() {
                     cal.set(year , month, dayOfMonth)
                     val getDay = sdformat.format(cal.getTime())
                     Log.d("date update: ", getDay)
-                    updateDate_Text.text = getDay //"날짜/시간 : "+ dateString // + " / " + timeString
+                    updateDate_Text.text = "${getDay}" //"날짜/시간 : "+ dateString // + " / " + timeString
+
                 }
             DatePickerDialog(
                 requireContext(),
@@ -136,6 +125,13 @@ class UpdateFragment : Fragment() {
                 cal.get(Calendar.DAY_OF_MONTH)
             ).show()
         }
+
+            mCrimeViewModel = ViewModelProvider(this).get(CrimeViewModel::class.java)
+
+            view.update_button.setOnClickListener {
+                updateItem()
+                updatePhotoView()
+            }
 
         reportButton.setOnClickListener {
             Intent(Intent.ACTION_SEND).apply {
@@ -148,6 +144,7 @@ class UpdateFragment : Fragment() {
                 startActivity(chooserIntent)
             }
         }
+
 
         getResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult())
         { it ->
@@ -165,7 +162,6 @@ class UpdateFragment : Fragment() {
                     cursor?.use {
                         // 쿼리 결과 데이터가 있는지 확인한다
                         if (it.count == 0) {
-                            return@registerForActivityResult
                         }
                         // 첫 번째 데이터 행의 첫 번째 열의 값을 가져온다
                         // 이값이 용의자의 이름이다
@@ -175,6 +171,7 @@ class UpdateFragment : Fragment() {
                       //  mCrimeViewModel.updateCrime(crime)
                         suspectButton.text = suspect
                     }
+                 //   updatePhotoView()
                 }
             }
         }
@@ -192,37 +189,47 @@ class UpdateFragment : Fragment() {
                 }
                 it.resultCode == RESULT_OK -> {
                     Log.d( "getResultPhoto","photo  ok")
+             //       requireActivity().revokeUriPermission(photoUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                     updatePhotoView()
                 }
             }
         }
-
         photoButton.apply {
-
+            val packageManager: PackageManager = requireActivity().packageManager
             val captureImage = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+
+           /* val resolvedActivity: ResolveInfo? = packageManager.resolveActivity(
+                captureImage, PackageManager.MATCH_DEFAULT_ONLY)
+             if (resolvedActivity == null) {
+                 Log.d("photo","cameraActivity")
+                 isEnabled = false
+             }*/
+
+         //   photoFile = mCrimeViewModel.getPhotoFile(crime)
             photoUri = FileProvider.getUriForFile(requireActivity(),
-                "com.inu.andoid.criminalintentnav.fileprovider",
-                file) // 임시 이미지 명
+                "com.inu.andoid.criminalintentnav.fileprovider",file)
 
             setOnClickListener {
                 captureImage.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
+                /*val cameraActivities: List<ResolveInfo> =
+                      packageManager.queryIntentActivities(captureImage, PackageManager.MATCH_DEFAULT_ONLY)
+
+                for (cameraActivity in cameraActivities) {
+                      requireActivity().grantUriPermission(cameraActivity.activityInfo.packageName,
+                      photoUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                }*/
 
                 if (ContextCompat.checkSelfPermission(requireContext(),
                     Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                     // 권한 있는 경우 실행할 코드...
                     getResultPhoto.launch(captureImage)
-                    Log.d("photo permissions :", "ok! \n" +
-                            " mCrimeViewModel.getPhotoFile(crime) -> ${mCrimeViewModel.getPhotoFile(crime)} \n " +
-                            "file -> $file \n" +
-                            "storageDir -> $storageDir \n" +
-                      //      "imgpath -> ${imgpath} \n" +
-                            "context?.cacheDir -> ${context?.cacheDir} \n" +
-                       //     "filePath -> ${filePath} \n" +
-                            "photoUri -> $photoUri" )
+                    Log.d("photo permissions :", "ok! ${file}, ${mCrimeViewModel.getPhotoFile(crime)}")
                 } else {// 권한 없는 경우, 권한 요청
                     permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
                     Log.d("phto permissions :", "no")
                 }
+
+              //  getResultPhoto.launch(captureImage)
             }
         }
 
@@ -258,61 +265,21 @@ class UpdateFragment : Fragment() {
 
     override fun onDetach() {
         super.onDetach()
-        file.delete()
+        requireActivity().revokeUriPermission(photoUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
     }
 
-    // 리스트에서 상세내역으로 올 때
-    private fun readPhotoView(crime: Crime) {
-        val resolver = context?.contentResolver
-        mCrimeViewModel = ViewModelProvider(this)[CrimeViewModel::class.java]
-        photoFile = File(context?.cacheDir, mCrimeViewModel.getPhotoFile(args.currentCrime).toString())
-        photoUri = FileProvider.getUriForFile(requireActivity(),
-            "com.inu.andoid.criminalintentnav.fileprovider", photoFile)
-     /*   if (file.length() == 0L) {
-            file.delete()
-        } 없어도 onDetach() 시 삭제시 해결됨*/
-        try {
-            val instream: InputStream? = resolver?.openInputStream(photoUri)
-            var imgBitmap = BitmapFactory.decodeStream(instream)
-            var imgBitmap2 = getScaledBitmap(photoFile.path, requireActivity())
-            imgBitmap2 = rotateImage(imgBitmap2, 90F)
-            photoView.setImageBitmap(imgBitmap2) // 선택한 이미지 이미지뷰에 셋
-            instream?.close() // 스트림 닫아주기
-            Log.d("photo: ","파일 불러오기 성공")
-        } catch (e: java.lang.Exception) {
-            Log.d("photo: ","파일 불러오기 실패, ${crime.photoFileName} \n" +
-                    "")
-        }
-    }
-
-    // 사진 찍고 난 후
     private fun updatePhotoView(){
+        if (file.exists()){
+          //  val bitmap = getScaledBitmap(photoFile.path, requireActivity())
+            val bitmap = getScaledBitmap(file.path, requireActivity())
+            photoView.setImageBitmap(bitmap)
+            Log.d("photofile: ", "exist!")
+        }else{
+            photoView.setImageDrawable(null)
 
-        val resolver = context?.contentResolver
-        try {
-            val instream: InputStream? = resolver?.openInputStream(photoUri) // 임시 이미지 Uri
-            var imgBitmap = BitmapFactory.decodeStream(instream)
-            var imgBitmap2 = getScaledBitmap(file.path, requireActivity())
-            imgBitmap2 = rotateImage(imgBitmap2, 90F) // 핸드폰에서 올바르게
-            photoView.setImageBitmap(imgBitmap2) // 선택한 이미지 이미지뷰에 셋
-            instream?.close() // 스트림 닫아주기
-
-        } catch (e: java.lang.Exception) {
-            Log.d("photo: ","파일 불러오기 실패")
+            Log.d("photofile: ", "no exist!, ${file.path}")
         }
     }
-
-    private fun saveBitmapToJpeg() {   // 선택한 이미지 내부 저장소에 저장
-        photoFile = File(context?.cacheDir, mCrimeViewModel.getPhotoFile(args.currentCrime).toString()) // 파일 경로와 이름 넣기
-        if( file.length() != 0L) {
-            file.renameTo(photoFile)
-            Log.d("photo 있음","${file}")
-        }
-        Log.d("photo: ","파일 저장 성공, file -> \n" +
-                "file -> ${file} \n" +
-                "photoFile -> ${photoFile}")
-    }
-
     private fun updateItem() {
         val title = updateTitle_et.text.toString()
         val date = updateDate_Text.text.toString()
@@ -326,7 +293,9 @@ class UpdateFragment : Fragment() {
             crime = stringToDate(date)?.let {
                 Crime(args.currentCrime.id, title, it, isChecked, suspcct)
             }!!
-
+            if (crime != null) {
+                mCrimeViewModel.updateCrime(crime)
+            }
             Toast.makeText(requireContext(), "${args.currentCrime.id}: ${title}, Successfully updated!", Toast.LENGTH_SHORT).show()
             // Navigate Back
             findNavController().navigate(R.id.action_updateFragment_to_listFragment)
