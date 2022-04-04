@@ -1,20 +1,14 @@
 package com.inu.andoid.criminalintentnav.fragments.update
 
 import android.Manifest
-import android.app.Activity
 import android.app.Activity.RESULT_OK
 import android.app.AlertDialog
-import android.app.Application
 import android.app.DatePickerDialog
-import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.pm.ResolveInfo
-import android.media.Image
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.provider.Settings
@@ -29,6 +23,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.inu.andoid.criminalintentnav.BuildConfig
@@ -67,7 +62,8 @@ class UpdateFragment() : Fragment() {
     private lateinit var photoUri: Uri
     val fileDir =  context?.filesDir
     val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
-    val storageDir: File? = context?.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+   // val storageDir: File? = context?.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+    val storageDir : File? = context?.cacheDir
     val file = File.createTempFile(
         "JPEG_${timeStamp}_",
         ".png",
@@ -145,7 +141,6 @@ class UpdateFragment() : Fragment() {
             }
         }
 
-
         getResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult())
         { it ->
             val intent: Intent? = it.data
@@ -185,6 +180,7 @@ class UpdateFragment() : Fragment() {
         {
             when {
                 it.resultCode != RESULT_OK -> {
+                    file.delete()
                     Toast.makeText(requireContext(), "photo no ok", Toast.LENGTH_SHORT).show()
                 }
                 it.resultCode == RESULT_OK -> {
@@ -257,6 +253,11 @@ class UpdateFragment() : Fragment() {
                     .show()
             }
         }
+
+        view.update_photo_iv.setOnClickListener {
+            val action = UpdateFragmentDirections.actionUpdateFragmentToDialogFragment(args.currentCrime)
+            view.findNavController().navigate(action)
+        }
         // Add menu
         setHasOptionsMenu(true)
 
@@ -269,7 +270,7 @@ class UpdateFragment() : Fragment() {
     }
 
     // updateFragment 내 썸네일 이미지 설정
-    private fun updatePhotoView(file: File){
+    fun updatePhotoView(file: File){
         if (file.exists()){
           //  val bitmap = getScaledBitmap(photoFile.path, requireActivity())
             val bitmap = getScaledBitmap(file.path, requireActivity())

@@ -9,13 +9,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.navArgs
 import com.inu.andoid.criminalintentnav.R
-import com.inu.andoid.criminalintentnav.getScaledBitmap
 import com.inu.andoid.criminalintentnav.model.Crime
 import com.inu.andoid.criminalintentnav.rotateImage
 import com.inu.andoid.criminalintentnav.viewmodel.CrimeViewModel
@@ -28,7 +25,6 @@ class DialogFragment : Fragment() {
     private val args by navArgs<DialogFragmentArgs>()
     private lateinit var photoView: ImageView
     private lateinit var mCrimeViewModel : CrimeViewModel
-    private lateinit var photoFile: File
     private lateinit var photoUri: Uri
     private lateinit var crime: Crime
 
@@ -49,8 +45,6 @@ class DialogFragment : Fragment() {
 
         readPhotoView()
 
-
-
         return view
     }
 
@@ -58,9 +52,11 @@ class DialogFragment : Fragment() {
     private fun readPhotoView() {
         val resolver = context?.contentResolver
         mCrimeViewModel = ViewModelProvider(this)[CrimeViewModel::class.java]
-        photoFile = File(context?.cacheDir, mCrimeViewModel.getPhotoFile(crime).toString())
-        photoUri = FileProvider.getUriForFile(requireActivity(),
-           "com.inu.andoid.criminalintentnav.fileprovider", photoFile)
+        photoUri = FileProvider.getUriForFile(
+            requireActivity(),
+           "com.inu.andoid.criminalintentnav.fileprovider",
+            mCrimeViewModel.getPhotoFile(crime)
+        )
 
         try {
             val instream: InputStream? = resolver?.openInputStream(photoUri)
@@ -71,7 +67,7 @@ class DialogFragment : Fragment() {
             instream?.close() // 스트림 닫아주기
             Log.d("photo: ","파일 불러오기 성공")
         } catch (e: java.lang.Exception) {
-            Log.d("photo: ","파일 불러오기 실패, ${crime.photoFileName} \n" +
+            Log.d("photo: ","파일 불러오기 실패, ${photoUri} \n" +
                     "")
         }
     }
