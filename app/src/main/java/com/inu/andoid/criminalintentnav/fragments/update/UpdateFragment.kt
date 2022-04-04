@@ -7,6 +7,7 @@ import android.app.DatePickerDialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.net.Uri
@@ -50,7 +51,6 @@ import java.util.*
 
 
 private const val DATE_FORMAT = "yyyy년 M월 d일 H시 m분, E요일"
-private const val REQUEST_PHOTO = 2
 class UpdateFragment() : Fragment() {
 
     private val args by navArgs<UpdateFragmentArgs>()
@@ -198,15 +198,15 @@ class UpdateFragment() : Fragment() {
             }
         }
         photoButton.apply {
-            val packageManager: PackageManager = requireActivity().packageManager
             val captureImage = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-
-           /* val resolvedActivity: ResolveInfo? = packageManager.resolveActivity(
+            val packageManager: PackageManager = requireActivity().packageManager
+            val resolvedActivity: ResolveInfo? = packageManager.resolveActivity(
                 captureImage, PackageManager.MATCH_DEFAULT_ONLY)
              if (resolvedActivity == null) {
                  Log.d("photo","cameraActivity")
                  isEnabled = false
-             }*/
+                 file.delete()
+             }
 
          //   photoFile = mCrimeViewModel.getPhotoFile(crime)
             photoUri = FileProvider.getUriForFile(requireActivity(),
@@ -214,13 +214,6 @@ class UpdateFragment() : Fragment() {
 
             setOnClickListener {
                 captureImage.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
-                /*val cameraActivities: List<ResolveInfo> =
-                      packageManager.queryIntentActivities(captureImage, PackageManager.MATCH_DEFAULT_ONLY)
-
-                for (cameraActivity in cameraActivities) {
-                      requireActivity().grantUriPermission(cameraActivity.activityInfo.packageName,
-                      photoUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                }*/
 
                 if (ContextCompat.checkSelfPermission(requireContext(),
                     Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
@@ -262,8 +255,10 @@ class UpdateFragment() : Fragment() {
         }
 
         view.update_photo_iv.setOnClickListener {
-            val action = UpdateFragmentDirections.actionUpdateFragmentToDialogFragment(args.currentCrime)
-            view.findNavController().navigate(action)
+            if (mCrimeViewModel.getPhotoFile(args.currentCrime).exists()){
+                val action = UpdateFragmentDirections.actionUpdateFragmentToDialogFragment(args.currentCrime)
+                view.findNavController().navigate(action)
+            }
         }
         // Add menu
         setHasOptionsMenu(true)
@@ -278,7 +273,7 @@ class UpdateFragment() : Fragment() {
 
     // updateFragment 내 썸네일 이미지 설정
     private fun updatePhotoView(file: File){
-        if (file.exists()){
+        if (file.length() != 0L){
           //  val bitmap = getScaledBitmap(photoFile.path, requireActivity())
             val bitmap = getScaledBitmap(file.path, requireActivity())
             photoUri = FileProvider.getUriForFile(requireActivity(),
@@ -327,7 +322,7 @@ class UpdateFragment() : Fragment() {
                     "${mCrimeViewModel.getPhotoFile(args.currentCrime)} \n" +
                     "file -> $file")
         } else {
-
+            file.delete()
             Log.d("savePhoto else: ", "${file.length()}, $file")
         }
     }
